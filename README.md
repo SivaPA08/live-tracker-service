@@ -2,6 +2,11 @@
 
 A real-time location tracking service built with Spring Boot, WebSockets (STOMP over SockJS), and Leaflet. Multiple users can share their GPS location, which is displayed live on a map for all connected clients.
 
+
+
+<img width="481" height="682" alt="Image" src="https://github.com/user-attachments/assets/b2837e23-68d3-48af-a7eb-3a930d8a7e56" />
+
+
 ---
 
 ## Features
