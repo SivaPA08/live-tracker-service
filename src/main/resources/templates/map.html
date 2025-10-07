@@ -171,7 +171,10 @@
 						`<b>${username}</b><br>` +
 						`Lat: ${lat.toFixed(6)}<br>` +
 						`Lon: ${lon.toFixed(6)}<br>` +
-						`<small>Updated: ${now.toLocaleTimeString()}</small>`
+						`<small>Updated: ${now.toLocaleTimeString()}</small>`, {
+						closeOnClick: false,
+						autoClose: false
+					}
 					);
 				markers[username] = m;
 				markerGroup.addLayer(m);
