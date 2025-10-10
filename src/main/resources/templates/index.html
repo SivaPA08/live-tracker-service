@@ -1,164 +1,246 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>GPS Location Sender</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Driver Dashboard</title>
+
+	<!-- SockJS & STOMP -->
 	<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
 	<style>
 		* {
+			box-sizing: border-box;
 			margin: 0;
 			padding: 0;
-			box-sizing: border-box;
+		}
+
+		html,
+		body {
+			height: 100%;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 		}
 
 		body {
-			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-			min-height: 100vh;
+			background: #f3f4f6;
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			padding: 20px;
+			color: #1f2937;
 		}
 
 		.container {
-			background: white;
-			padding: 40px;
-			border-radius: 16px;
-			box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-			max-width: 400px;
 			width: 100%;
+			max-width: 900px;
 		}
 
-		h2 {
-			color: #333;
-			margin-bottom: 24px;
+		.header {
 			text-align: center;
+			margin-bottom: 32px;
+			color: #111827;
 		}
 
-		.input-group {
-			margin-bottom: 20px;
-		}
-
-		label {
-			display: block;
+		.header h1 {
+			font-size: 36px;
+			font-weight: 700;
 			margin-bottom: 8px;
-			color: #555;
-			font-weight: 500;
+			letter-spacing: -0.5px;
 		}
 
-		input {
-			width: 100%;
-			padding: 12px;
-			border: 2px solid #e0e0e0;
-			border-radius: 8px;
+		.header p {
 			font-size: 16px;
-			transition: border-color 0.3s;
+			color: #6b7280;
+			font-weight: 400;
 		}
 
-		input:focus {
+		.card {
+			background: white;
+			border-radius: 16px;
+			box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+			padding: 32px;
+		}
+
+		.card-header {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			margin-bottom: 28px;
+			padding-bottom: 20px;
+			border-bottom: 2px solid #e5e7eb;
+		}
+
+		.card-header svg {
+			color: #3b82f6;
+		}
+
+		.card-header h2 {
+			font-size: 24px;
+			font-weight: 600;
+			color: #111827;
+		}
+
+		.form-field {
+			display: flex;
+			flex-direction: column;
+			margin-bottom: 24px;
+		}
+
+		.form-field label {
+			font-size: 14px;
+			font-weight: 600;
+			color: #374151;
+			margin-bottom: 8px;
+		}
+
+		.form-field input {
+			padding: 14px 16px;
+			border: 2px solid #e5e7eb;
+			border-radius: 8px;
+			font-size: 15px;
+			transition: all 0.2s;
+			background: white;
+		}
+
+		.form-field input:focus {
 			outline: none;
-			border-color: #667eea;
+			border-color: #3b82f6;
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 		}
 
-		button {
+		.form-field input::placeholder {
+			color: #9ca3af;
+		}
+
+		.btn-start {
 			width: 100%;
-			padding: 14px;
+			padding: 16px;
+			background: #3b82f6;
+			color: white;
 			border: none;
 			border-radius: 8px;
 			font-size: 16px;
 			font-weight: 600;
 			cursor: pointer;
-			transition: all 0.3s;
-			margin-bottom: 12px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 10px;
+			transition: all 0.2s;
 		}
 
-		#startBtn {
-			background: #667eea;
-			color: white;
+		.btn-start:hover:not(:disabled) {
+			background: #2563eb;
+			transform: translateY(-1px);
+			box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 		}
 
-		#startBtn:hover:not(:disabled) {
-			background: #5568d3;
-			transform: translateY(-2px);
-			box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-		}
-
-		#stopBtn {
-			background: #f44336;
-			color: white;
-		}
-
-		#stopBtn:hover:not(:disabled) {
-			background: #d32f2f;
-			transform: translateY(-2px);
-			box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
-		}
-
-		button:disabled {
+		.btn-start:disabled {
 			opacity: 0.5;
 			cursor: not-allowed;
+			transform: none;
 		}
 
-		.status {
-			margin-top: 20px;
-			padding: 12px;
+		.btn-stop {
+			width: 100%;
+			padding: 16px;
+			background: #ef4444;
+			color: white;
+			border: none;
 			border-radius: 8px;
-			text-align: center;
-			font-size: 14px;
+			font-size: 16px;
+			font-weight: 600;
+			cursor: pointer;
+			margin-top: 12px;
+			transition: all 0.2s;
+		}
+
+		.btn-stop:hover:not(:disabled) {
+			background: #dc2626;
+			transform: translateY(-1px);
+			box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+		}
+
+		.btn-stop:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+			transform: none;
+		}
+
+		.status-section {
+			margin-top: 24px;
+			padding-top: 24px;
+			border-top: 2px solid #e5e7eb;
 			display: none;
 		}
 
-		.status.active {
+		.status-section.active {
 			display: block;
-			background: #e8f5e9;
-			color: #2e7d32;
-			border: 1px solid #a5d6a7;
 		}
 
-		.status.error {
-			display: block;
-			background: #ffebee;
-			color: #c62828;
-			border: 1px solid #ef9a9a;
+		.status-badge {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 8px 16px;
+			border-radius: 20px;
+			font-size: 14px;
+			font-weight: 600;
+			margin-bottom: 16px;
 		}
 
-		.info {
+		.status-badge.connected {
+			background: #dcfce7;
+			color: #166534;
+		}
+
+		.status-badge.error {
+			background: #fee2e2;
+			color: #991b1b;
+		}
+
+		.location-info {
+			display: grid;
+			grid-template-columns: repeat(2, 1fr);
+			gap: 16px;
 			margin-top: 16px;
-			padding: 12px;
-			background: #f5f5f5;
+		}
+
+		.info-box {
+			background: #f9fafb;
+			padding: 16px;
 			border-radius: 8px;
-			font-size: 13px;
-			color: #666;
+			border: 1px solid #e5e7eb;
 		}
 
-		.info p {
-			margin: 4px 0;
+		.info-label {
+			font-size: 12px;
+			color: #6b7280;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			margin-bottom: 6px;
 		}
 
-		.pulse {
-			display: inline-block;
-			width: 10px;
-			height: 10px;
-			border-radius: 50%;
-			background: #4CAF50;
-			margin-right: 8px;
-			animation: pulse 2s infinite;
+		.info-value {
+			font-size: 16px;
+			color: #111827;
+			font-weight: 600;
 		}
 
-		@keyframes pulse {
-
-			0%,
-			100% {
-				opacity: 1;
+		@media (max-width: 640px) {
+			.header h1 {
+				font-size: 28px;
 			}
 
-			50% {
-				opacity: 0.3;
+			.location-info {
+				grid-template-columns: 1fr;
+			}
+
+			.card {
+				padding: 24px;
 			}
 		}
 	</style>
@@ -166,191 +248,178 @@
 
 <body>
 	<div class="container">
-		<h2>📍 GPS Location Tracker</h2>
-
-		<div class="input-group">
-			<label for="username">Username</label>
-			<input id="username" type="text" placeholder="Enter your username" autocomplete="off" />
+		<div class="header">
+			<h1>Live Tracking</h1>
+			<p>Start, pause, or end your journey and track your route</p>
 		</div>
 
-		<button id="startBtn">Start Tracking</button>
-		<button id="stopBtn" disabled>Stop Tracking</button>
+		<div class="card">
+			<div class="card-header">
+				<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+				</svg>
+				<h2>User Controls</h2>
+			</div>
 
-		<div id="status" class="status"></div>
+			<div class="form-field">
+				<label for="busId">User-ID</label>
+				<input id="busId" type="text" placeholder="e.g., BUS-001" autocomplete="off" />
+			</div>
 
-		<div class="info" id="locationInfo">
-			<p><strong>Working:</strong></p>
-			<p>ur location will be mine</p>
-			<p>let me track all ur location pls</p>
-			<p>dont turn off ur phone</p>
-		</div>
+			<button id="startBtn" class="btn-start">
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M8 5v14l11-7z" />
+				</svg>
+				Start
+			</button>
 
-		<div id="currentLocation" class="info"
-			style="display:none; margin-top: 12px; background: #e3f2fd; border: 1px solid #90caf9;">
-			<p><strong>ur location btw:</strong></p>
-			<p><strong>User:</strong> <span id="displayUsername">-</span></p>
-			<p><strong>Latitude:</strong> <span id="displayLat">-</span></p>
-			<p><strong>Longitude:</strong> <span id="displayLon">-</span></p>
-			<p style="font-size: 11px; color: #888; margin-top: 4px;">Last updated: <span id="displayTime">-</span></p>
+			<button id="stopBtn" class="btn-stop" disabled style="display:none">
+				Stop
+			</button>
+
+			<div id="statusSection" class="status-section">
+				<div id="statusBadge" class="status-badge"></div>
+				<div class="location-info">
+					<div class="info-box">
+						<div class="info-label">User-ID</div>
+						<div class="info-value" id="displayBusId">-</div>
+					</div>
+					<div class="info-box">
+						<div class="info-label">Latitude</div>
+						<div class="info-value" id="displayLat">-</div>
+					</div>
+					<div class="info-box">
+						<div class="info-label">Longitude</div>
+						<div class="info-value" id="displayLon">-</div>
+					</div>
+					<div class="info-box">
+						<div class="info-label">Last Update</div>
+						<div class="info-value" id="displayTime">-</div>
+					</div>
+					<div class="info-box">
+						<div class="info-label">Status</div>
+						<div class="info-value" id="displayStatus">Active</div>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 
 	<script>
 		let stompClient = null;
 		let intervalId = null;
-		let currentUsername = null;
-		let lastPosition = null;
+		let currentBusId = null;
 
-		document.getElementById('startBtn').addEventListener('click', startTracking);
-		document.getElementById('stopBtn').addEventListener('click', stopTracking);
+		const startBtn = document.getElementById('startBtn');
+		const stopBtn = document.getElementById('stopBtn');
+		const statusSection = document.getElementById('statusSection');
+		const statusBadge = document.getElementById('statusBadge');
 
-		// Allow Enter key to start tracking
-		document.getElementById('username').addEventListener('keypress', function (e) {
-			if (e.key === 'Enter' && !document.getElementById('startBtn').disabled) {
-				startTracking();
-			}
-		});
+		startBtn.addEventListener('click', startJourney);
+		stopBtn.addEventListener('click', stopJourney);
 
-		function startTracking() {
-			const username = document.getElementById('username').value.trim();
+		function showStatus(text, isConnected = true) {
+			statusSection.classList.add('active');
+			statusBadge.className = 'status-badge ' + (isConnected ? 'connected' : 'error');
+			statusBadge.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="10"/>
+        </svg>
+        ${text}
+      `;
+		}
 
-			if (!username) {
-				showStatus('Please enter a username', 'error');
+		function startJourney() {
+			const busId = document.getElementById('busId').value.trim();
+
+			if (!busId) {
+				showStatus('Please enter Bus ID', false);
 				return;
 			}
 
-			currentUsername = username;
+			currentBusId = busId;
 
-			// Check if geolocation is supported
 			if (!navigator.geolocation) {
-				showStatus('Geolocation is not supported by your browser', 'error');
+				showStatus('Geolocation not supported by browser', false);
 				return;
 			}
 
-			// Connect to WebSocket
 			const socket = new SockJS('/ws');
 			stompClient = Stomp.over(socket);
 			if (stompClient && stompClient.debug) stompClient.debug = null;
 
-			stompClient.connect({}, function (frame) {
-				console.log('Connected: ' + frame);
-				showStatus('Connected! Sending location every 5 seconds...', 'active');
+			stompClient.connect({}, frame => {
+				showStatus('Connected — Tracking journey', true);
 
-				// Show current location div
-				document.getElementById('currentLocation').style.display = 'block';
-				document.getElementById('displayUsername').textContent = currentUsername;
+				document.getElementById('displayBusId').textContent = currentBusId;
+				document.getElementById('busId').disabled = true;
+				startBtn.style.display = 'none';
+				stopBtn.style.display = 'block';
+				stopBtn.disabled = false;
 
-				// Get initial position
-				sendCurrentLocation();
-
-				// Send location every 5 seconds
-				intervalId = setInterval(sendCurrentLocation, 5000);
-
-				// Update UI
-				document.getElementById('startBtn').disabled = true;
-				document.getElementById('stopBtn').disabled = false;
-				document.getElementById('username').disabled = true;
-
-			}, function (error) {
-				console.error('WebSocket connection error:', error);
-				showStatus('Connection failed. Please check your connection.', 'error');
+				sendLocation();
+				intervalId = setInterval(sendLocation, 5000);
+			}, err => {
+				console.error('WebSocket error', err);
+				showStatus('Connection failed', false);
 			});
 		}
 
-		function sendCurrentLocation() {
+		function sendLocation() {
 			if (!navigator.geolocation) {
-				showStatus('Geolocation not supported', 'error');
+				showStatus('Geolocation not available', false);
 				return;
 			}
 
-			navigator.geolocation.getCurrentPosition(
-				function (position) {
-					lastPosition = position;
-					const payload = {
-						username: currentUsername,
-						latitude: position.coords.latitude,
-						longitude: position.coords.longitude
-					};
+			navigator.geolocation.getCurrentPosition(pos => {
+				const lat = pos.coords.latitude;
+				const lon = pos.coords.longitude;
+				const payload = {
+					username: currentBusId,
+					latitude: lat,
+					longitude: lon
+				};
 
-					// Update UI with current location FIRST (so user sees it immediately)
-					document.getElementById('displayLat').textContent = position.coords.latitude.toFixed(6);
-					document.getElementById('displayLon').textContent = position.coords.longitude.toFixed(6);
-					document.getElementById('displayTime').textContent = new Date().toLocaleTimeString();
+				document.getElementById('displayLat').textContent = lat.toFixed(6);
+				document.getElementById('displayLon').textContent = lon.toFixed(6);
+				document.getElementById('displayTime').textContent = new Date().toLocaleTimeString();
 
-					// Then send to server
-					if (stompClient && stompClient.connected) {
-						stompClient.send('/app/location', {}, JSON.stringify(payload));
-						console.log('✓ Sent location:', payload);
-
-						const now = new Date().toLocaleTimeString();
-						showStatus(`<span class="pulse"></span>Location sent at ${now}`, 'active');
-					} else {
-						console.warn('WebSocket not connected, cannot send location');
-						showStatus('Connection lost. Reconnecting...', 'error');
-					}
-				},
-				function (error) {
-					console.error('Geolocation error:', error);
-					let errorMsg = 'Error getting location: ';
-					switch (error.code) {
-						case error.PERMISSION_DENIED:
-							errorMsg += 'Permission denied';
-							break;
-						case error.POSITION_UNAVAILABLE:
-							errorMsg += 'Position unavailable';
-							break;
-						case error.TIMEOUT:
-							errorMsg += 'Request timeout';
-							break;
-						default:
-							errorMsg += 'Unknown error';
-					}
-					showStatus(errorMsg, 'error');
-				},
-				{
-					enableHighAccuracy: true,
-					maximumAge: 0,
-					timeout: 10000
+				if (stompClient && stompClient.connected) {
+					stompClient.send('/app/location', {}, JSON.stringify(payload));
+					showStatus('Journey active — Location updated', true);
+				} else {
+					showStatus('Connection lost — Reconnecting...', false);
 				}
-			);
+			}, err => {
+				console.warn('Location error', err);
+				showStatus('Unable to get location', false);
+			}, {enableHighAccuracy: true, maximumAge: 0, timeout: 10000});
 		}
 
-		function stopTracking() {
-			// Clear interval
+		function stopJourney() {
 			if (intervalId) {
 				clearInterval(intervalId);
 				intervalId = null;
 			}
-
-			// Disconnect WebSocket
 			if (stompClient && stompClient.connected) {
 				try {
 					stompClient.disconnect();
 				} catch (e) {
-					console.error('Error disconnecting:', e);
+					console.warn(e);
 				}
-				stompClient = null;
 			}
+			stompClient = null;
 
-			// Update UI
-			document.getElementById('startBtn').disabled = false;
-			document.getElementById('stopBtn').disabled = true;
-			document.getElementById('username').disabled = false;
-			document.getElementById('currentLocation').style.display = 'none';
-
-			showStatus('Tracking stopped', 'error');
-			console.log('Stopped tracking');
+			document.getElementById('busId').disabled = false;
+			startBtn.style.display = 'block';
+			stopBtn.style.display = 'none';
+			stopBtn.disabled = true;
+			document.getElementById('displayStatus').textContent = 'Stopped';
+			showStatus('Journey ended', false);
 		}
 
-		function showStatus(message, type) {
-			const statusEl = document.getElementById('status');
-			statusEl.innerHTML = message;
-			statusEl.className = 'status ' + type;
-		}
-
-		// Clean up on page unload
-		window.addEventListener('beforeunload', function () {
-			stopTracking();
+		window.addEventListener('beforeunload', () => {
+			stopJourney();
 		});
 	</script>
 </body>
