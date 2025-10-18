@@ -34,17 +34,18 @@
 			top: 10px;
 			right: 10px;
 			background: rgba(255, 255, 255, 0.95);
-			padding: 12px 16px;
+			padding: 16px;
 			border-radius: 8px;
 			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 			z-index: 1000;
-			max-width: 250px;
+			max-width: 300px;
 		}
 
 		.info-panel h3 {
-			margin: 0 0 8px 0;
+			margin: 0 0 12px 0;
 			font-size: 14px;
 			color: #333;
+			font-weight: 600;
 		}
 
 		.info-panel p {
@@ -69,15 +70,58 @@
 			background: #f44336;
 		}
 
+		.active-users-label {
+			margin-top: 12px;
+			font-size: 12px;
+			font-weight: 600;
+			color: #333;
+			margin-bottom: 6px;
+		}
+
+		.active-users-box {
+			max-height: 200px;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			background: #fafafa;
+			overflow-y: auto;
+		}
+
+		.user-item {
+			padding: 8px 10px;
+			border-bottom: 1px solid #e0e0e0;
+			cursor: pointer;
+			font-size: 12px;
+			color: #333;
+			transition: background-color 0.2s;
+		}
+
+		.user-item:hover {
+			background: #e3f2fd;
+			color: #1976D2;
+		}
+
+		.user-item:last-child {
+			border-bottom: none;
+		}
+
+		.empty-users {
+			padding: 12px 10px;
+			text-align: center;
+			font-size: 12px;
+			color: #999;
+		}
+
 		button {
-			margin-top: 8px;
-			padding: 6px 12px;
+			margin-top: 12px;
+			padding: 8px 12px;
 			background: #2196F3;
 			color: white;
 			border: none;
 			border-radius: 4px;
 			cursor: pointer;
 			font-size: 12px;
+			width: 100%;
+			font-weight: 600;
 		}
 
 		button:hover {
@@ -92,6 +136,10 @@
 		<h3><span class="status disconnected" id="status"></span>Live Tracking</h3>
 		<p>Active Users: <strong id="userCount">0</strong></p>
 		<p>Last Update: <span id="lastUpdate">Never</span></p>
+
+		<div class="active-users-label">Active Users:</div>
+		<div class="active-users-box" id="activeUsersList"></div>
+
 		<button onclick="showAllMarkers()">View All</button>
 	</div>
 
@@ -101,6 +149,7 @@
 		let markers = {};
 		let markerGroup = L.layerGroup().addTo(map);
 		let lastUpdateTimes = {};
+		let inactivityTimeout = {};
 
 		// Add OpenStreetMap tiles
 		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -134,10 +183,19 @@
 					}
 				});
 
+				// Subscribe to user disconnection events
+				stompClient.subscribe('/topic/user-disconnected', function (message) {
+					try {
+						const data = JSON.parse(message.body);
+						removeMarker(data.username || 'unknown');
+					} catch (e) {
+						console.error('Failed to parse disconnect message', e);
+					}
+				});
+
 			}, function (err) {
 				console.error('STOMP connection error:', err);
 				updateStatus(false);
-				// Attempt reconnection after 5 seconds
 				setTimeout(connectWebSocket, 5000);
 			});
 		}
@@ -147,6 +205,17 @@
 
 			const now = new Date();
 			lastUpdateTimes[username] = now;
+
+			// Clear previous inactivity timeout if exists
+			if (inactivityTimeout[username]) {
+				clearTimeout(inactivityTimeout[username]);
+			}
+
+			// Set new inactivity timeout (30 seconds)
+			inactivityTimeout[username] = setTimeout(() => {
+				console.log('User inactive: ' + username);
+				removeMarker(username);
+			}, 5000);
 
 			if (markers[username]) {
 				// Update existing marker
@@ -178,18 +247,57 @@
 					);
 				markers[username] = m;
 				markerGroup.addLayer(m);
-
-				// Auto-pan to new user
 				map.panTo([lat, lon], {animate: true});
 			}
 
-			// Update info panel
 			updateInfoPanel();
+			updateActiveUsersList();
+		}
+
+		function removeMarker(username) {
+			if (markers[username]) {
+				markerGroup.removeLayer(markers[username]);
+				delete markers[username];
+				delete lastUpdateTimes[username];
+				if (inactivityTimeout[username]) {
+					clearTimeout(inactivityTimeout[username]);
+					delete inactivityTimeout[username];
+				}
+				updateInfoPanel();
+				updateActiveUsersList();
+				console.log('Marker removed for: ' + username);
+			}
 		}
 
 		function updateInfoPanel() {
 			document.getElementById('userCount').textContent = Object.keys(markers).length;
 			document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+		}
+
+		function updateActiveUsersList() {
+			const usersList = document.getElementById('activeUsersList');
+			const users = Object.keys(markers).sort();
+
+			usersList.innerHTML = '';
+
+			if (users.length === 0) {
+				usersList.innerHTML = '<div class="empty-users">No active users</div>';
+				return;
+			}
+
+			users.forEach(username => {
+				const userItem = document.createElement('div');
+				userItem.className = 'user-item';
+				userItem.textContent = username;
+				userItem.onclick = function () {
+					const marker = markers[username];
+					if (marker) {
+						map.setView(marker.getLatLng(), 16);
+						marker.openPopup();
+					}
+				};
+				usersList.appendChild(userItem);
+			});
 		}
 
 		function updateStatus(connected) {
@@ -210,21 +318,6 @@
 			const bounds = L.latLngBounds(latlngs);
 			map.fitBounds(bounds.pad(0.2));
 		}
-
-		// Clean up old markers (optional - removes markers inactive for 5 minutes)
-		setInterval(() => {
-			const now = new Date();
-			Object.keys(lastUpdateTimes).forEach(username => {
-				if (now - lastUpdateTimes[username] > 300000) { // 5 minutes
-					if (markers[username]) {
-						markerGroup.removeLayer(markers[username]);
-						delete markers[username];
-						delete lastUpdateTimes[username];
-						updateInfoPanel();
-					}
-				}
-			});
-		}, 60000); // Check every minute
 	</script>
 </body>
 
